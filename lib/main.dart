@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:english_words/english_words.dart';
 
@@ -9,115 +11,200 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Startup Name Generator',
+      title: 'Quartine Time Tracker',
       theme: ThemeData(
         primaryColor: Colors.black,
         backgroundColor: Colors.white,
-        canvasColor: Colors.blueGrey.shade500,
+        // canvasColor: Colors.blueGrey.shade100,
       ),
-      home: RandomWords(),
+      home: StartTime(),
+      debugShowCheckedModeBanner: false,
     );
   }
   // #enddocregion build
 }
-// #enddocregion MyApp
 
-// #docregion RWS-var
-class RandomWordsState extends State<RandomWords> {
-  final _suggestions = <WordPair>[];
-  final Set<WordPair> _saved = Set<WordPair>();   // Add this line.
-  final _biggerFont = const TextStyle(fontSize: 18.0);
-  // #enddocregion RWS-var
+class Time {
+  DateTime timeStart = DateTime.now();
+  DateTime timeFinish = DateTime.now();
+  Duration timeLength = new Duration(seconds: 0);
+}
 
-  void _pushedSaved(){
-    Navigator.of(context).push(
-       MaterialPageRoute<void>(   // Add 20 lines from here...
-      builder: (BuildContext context) {
-        final Iterable<ListTile> tiles = _saved.map(
-          (WordPair pair) {
+class StartTimeState extends State<StartTime> {
+  // final List<WordPair> _suggestions = <WordPair>[];
+  final Set<Time> _saved = <Time>{};
+  var tracking = false;
+  var times = {};
+  var start = DateTime.now();
+  var end = DateTime.now();
+  Duration length = new Duration(seconds: 0);
+  //Time structure {
+  // Start: timestamp,
+  // end: Timestamp,
+  // length: float,
+  //}
+
+  Widget _buildRow(Time pair) {
+  final bool alreadySaved = _saved.contains(pair);  // Add this line.
+      // final alreadySaved = _saved.contains(pair);
+    return new ListTile(
+      title: new Text(
+        pair.timeLength.toString(),
+      ),
+      trailing: new Icon(
+        alreadySaved ? Icons.favorite : Icons.favorite_border,
+        color: alreadySaved ? Colors.red : null,
+      ),
+      onTap: () {
+        setState(
+          () {
+            if (alreadySaved) {
+              _saved.remove(pair);
+            } else {
+              _saved.add(pair);
+            }
+          },
+        );
+      },
+    );
+
+}
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(
+          title: Text("Quartine Time tracker"),
+          actions: <Widget>[
+            IconButton(
+                icon: Icon(Icons.list),
+                onPressed: () {openPage(context);}
+                )
+          ],
+        ),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const SizedBox(height: 30),
+              RaisedButton(
+                color: Colors.blueGrey,
+                onPressed: () {
+                  tracking = true;
+                  start = new DateTime.now();
+                  print(start);
+                  // start++;
+                },
+                child: const Text('Start Tracking',
+                    style: TextStyle(fontSize: 20)),
+              ),
+              const SizedBox(height: 30),
+              FlatButton(
+                  color: Colors.red,
+                  onPressed: () {
+                    tracking = false;
+                    end = DateTime.now();
+                    length = end.difference(start);
+                    Time pair = new Time();
+                    pair.timeStart = start;
+                    pair.timeFinish = end;
+                    pair.timeLength = end.difference(start);
+                    setState(() {
+                      length = end.difference(start);
+                       _saved.add(pair);
+                    });
+                    print(length);
+                  },
+                  child: Text(
+                    "Stop tracking",
+                    style: TextStyle(fontSize: 20),
+                  )),
+              Text('$length')
+            ],
+          ),
+        ));
+  }
+  void openPage(BuildContext context) {
+  Navigator.push(context, MaterialPageRoute(
+   builder: (BuildContext context) {
+        final tiles = _saved.map(
+          (Time pair) {
             return ListTile(
               title: Text(
-                pair.asPascalCase,
-                style: _biggerFont,
+                pair.timeLength.toString(),
               ),
             );
           },
         );
-        final List<Widget> divided = ListTile
-          .divideTiles(
-            context: context,
-            tiles: tiles,
-          )
-          .toList();
-          return Scaffold(
-            appBar: AppBar(
-              title: Text('Saved suggestions'),
-          ),body: ListView(children: divided),
-          );
+        final List<Widget> divided = ListTile.divideTiles(
+          context: context,
+          tiles: tiles,
+        ).toList();
+
+        return Scaffold(
+          // Add 6 lines from here...
+          appBar: AppBar(
+            title: Text('Historical Times'),
+          ),
+          body: ListView(children: divided),
+        ); // ... to here.
       },
-    ),                       // ... to here.
-    );
-  }
-  // #docregion _buildSuggestions
-  Widget _buildSuggestions() {
-    return ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemBuilder: /*1*/ (context, i) {
-          if (i.isOdd) return Divider(); /*2*/
+  ));
+}
+}
 
-          final index = i ~/ 2; /*3*/
-          if (index >= _suggestions.length) {
-            _suggestions.addAll(generateWordPairs().take(10)); /*4*/
-          }
-          return _buildRow(_suggestions[index]);
-        });
-  }
-  // #enddocregion _buildSuggestions
+class StartTime extends StatefulWidget {
+  @override
+  StartTimeState createState() => new StartTimeState();
+}
 
-  // #docregion _buildRow
-  Widget _buildRow(WordPair pair) {
-    final bool alreadySaved = _saved.contains(pair);  // Add this line.
-    return ListTile(
-      title: Text(
-        pair.asPascalCase,
-        style: _biggerFont,
-      ),
-      trailing: Icon(   // Add the lines from here... 
-      alreadySaved ? Icons.favorite : Icons.favorite_border,
-      color: alreadySaved ? Colors.red : null,
-    ),
-    onTap: () {
-      setState(() {
-        if (alreadySaved){
-          _saved.remove(pair);
-        }else{
-          _saved.add(pair);
-        }
-      });
-    },            
-    );
-  }
-  // #enddocregion _buildRow
 
-  // #docregion RWS-build
+
+// void _pushSaved() {
+//   Navigator.of(context).push(
+//     MaterialPageRoute<void>(
+//       builder: (BuildContext context) {
+//         final tiles = _saved.map(
+//           (Time pair) {
+//             return ListTile(
+//               title: Text(
+//                 pair.length.toString(),
+//               ),
+//             );
+//           },
+//         );
+//         final List<Widget> divided = ListTile.divideTiles(
+//           context: context,
+//           tiles: tiles,
+//         ).toList();
+
+//         return Scaffold(
+//           // Add 6 lines from here...
+//           appBar: AppBar(
+//             title: Text('Saved Suggestions'),
+//           ),
+//           body: ListView(children: divided),
+//         ); // ... to here.
+//       },
+//     ),
+//   );
+// }
+
+class _saved {
+}
+
+class ViewTime extends StatefulWidget {
+  @override
+  _ViewTimeState createState() => _ViewTimeState();
+}
+
+class _ViewTimeState extends State<ViewTime> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Startup Name Generator'),
-        actions: <Widget>[
-          IconButton(icon: Icon(Icons.list), onPressed: _pushedSaved),
-        ],
+        title: Text("View Time"),
+        actions: <Widget>[],
       ),
-      body: _buildSuggestions(),
+      body: Center(child: Text("Time")),
     );
   }
-  // #enddocregion RWS-build
-  // #docregion RWS-var
-}
-// #enddocregion RWS-var
-
-class RandomWords extends StatefulWidget {
-  @override
-  RandomWordsState createState() => new RandomWordsState();
 }
